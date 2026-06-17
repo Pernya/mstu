@@ -187,7 +187,6 @@ docker compose -f docker-compose.etl.yml --env-file .env exec postgres psql -U r
 ```bash
 plantuml docs/diagrams/solution_architecture.puml
 plantuml docs/diagrams/etl_activity.puml
-plantuml docs/diagrams/data_vault_schema.puml
 plantuml docs/diagrams/archimate_solution.puml
 ```
 
