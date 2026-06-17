@@ -1,0 +1,44 @@
+x-superset-common: &superset-common
+  build:
+    context: ./docker/superset
+  env_file:
+    - path: .env.example
+      required: true
+    - path: .env
+      required: false
+  environment:
+    SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-retail-superset-secret-key-change-in-production}
+    SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME:-admin}
+    SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-admin}
+    SUPERSET_ADMIN_FIRSTNAME: ${SUPERSET_ADMIN_FIRSTNAME:-Retail}
+    SUPERSET_ADMIN_LASTNAME: ${SUPERSET_ADMIN_LASTNAME:-Admin}
+    SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-admin@example.com}
+    SUPERSET_RETAIL_DATABASE_URI: ${SUPERSET_RETAIL_DATABASE_URI:-postgresql+psycopg2://retail_user:retail_password@host.docker.internal:5433/retail_dwh}
+    SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+    PYTHONPATH: /app/pythonpath
+  volumes:
+    - superset_home:/app/superset_home
+    - ./docker/superset:/app/pythonpath:ro
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+services:
+  superset-init:
+    <<: *superset-common
+    container_name: retail_superset_init
+    command: /app/pythonpath/init_superset.sh
+    restart: "no"
+
+  superset:
+    <<: *superset-common
+    container_name: retail_superset
+    command: /app/pythonpath/run_superset.sh
+    ports:
+      - "${SUPERSET_PORT:-8088}:8088"
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  superset_home:

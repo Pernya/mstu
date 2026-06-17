@@ -1,0 +1,9 @@
+[project]
+name = "retail-airflow-ml-dwh"
+version = "0.1.0"
+description = "ВКР: ETL, DWH и ML-пайплайн для розничных продаж"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

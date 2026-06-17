@@ -1,0 +1,103 @@
+erDiagram
+    RAW_SALES {
+        int calendar_year
+        int cal_month_num
+        string supplier
+        string item_code
+        string item_type
+        float rtl_sales
+        float rtl_transfers
+        float whs_sales
+    }
+
+    HUB_PERIOD {
+        string period_hk
+        int calendar_year
+        int cal_month_num
+        date period_date
+    }
+
+    HUB_SUPPLIER {
+        string supplier_hk
+        string supplier
+    }
+
+    HUB_PRODUCT {
+        string product_hk
+        string item_code
+    }
+
+    LINK_SALES {
+        string sales_link_hk
+        string period_hk
+        string supplier_hk
+        string product_hk
+    }
+
+    SAT_PRODUCT {
+        string product_hk
+        string item_description
+        string item_type
+    }
+
+    SAT_SALES_METRICS {
+        string sales_link_hk
+        float rtl_sales
+        float rtl_transfers
+        float whs_sales
+        string metrics_hashdiff
+    }
+
+    DM_MONTHLY_SALES {
+        date period_date
+        float retail_sales
+        float retail_transfers
+        float warehouse_sales
+    }
+
+    DM_ITEM_TYPE_SALES {
+        date period_date
+        string item_type
+        float retail_sales
+    }
+
+    DM_SUPPLIER_SALES {
+        string supplier
+        float retail_sales
+        int products_count
+    }
+
+    SALES_FORECAST {
+        date period_date
+        string item_type
+        string supplier_group
+        float forecast_retail_sales
+    }
+
+    SUPPLIER_CLUSTER_PROFILES {
+        int cluster_id
+        string segment_name
+        string business_recommendation
+    }
+
+    SUPPLIER_CLUSTER_MEMBERS {
+        string supplier
+        int cluster_id
+        string segment_name
+        float retail_sales
+    }
+
+    RAW_SALES ||--o{ HUB_PERIOD : "формирует"
+    RAW_SALES ||--o{ HUB_SUPPLIER : "формирует"
+    RAW_SALES ||--o{ HUB_PRODUCT : "формирует"
+    HUB_PERIOD ||--o{ LINK_SALES : "участвует"
+    HUB_SUPPLIER ||--o{ LINK_SALES : "участвует"
+    HUB_PRODUCT ||--o{ LINK_SALES : "участвует"
+    HUB_PRODUCT ||--o{ SAT_PRODUCT : "описывается"
+    LINK_SALES ||--o{ SAT_SALES_METRICS : "измеряется"
+    RAW_SALES ||--o{ DM_MONTHLY_SALES : "агрегируется"
+    RAW_SALES ||--o{ DM_ITEM_TYPE_SALES : "агрегируется"
+    RAW_SALES ||--o{ DM_SUPPLIER_SALES : "агрегируется"
+    DM_MONTHLY_SALES ||--o{ SALES_FORECAST : "питает"
+    DM_SUPPLIER_SALES ||--o{ SUPPLIER_CLUSTER_MEMBERS : "сегментирует"
+    SUPPLIER_CLUSTER_PROFILES ||--o{ SUPPLIER_CLUSTER_MEMBERS : "объединяет"

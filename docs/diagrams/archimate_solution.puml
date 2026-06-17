@@ -1,0 +1,80 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #1F2933
+top to bottom direction
+
+package "Мотивация" {
+  component "Потребность в прогнозе продаж" as Driver <<Driver>>
+  component "Снижение ручной подготовки отчетов" as Goal <<Goal>>
+  component "Проверяемый ML-пайплайн" as Outcome <<Outcome>>
+}
+
+package "Бизнес-слой" {
+  actor "Аналитик" as Analyst <<Business Actor>>
+  component "Анализ розничных продаж" as BusinessProcess <<Business Process>>
+  component "Рекомендации по поставщикам" as Recommendation <<Business Object>>
+}
+
+package "Прикладной слой" {
+  component "Сервис оркестрации Airflow" as AirflowService <<Application Service>>
+  component "Процесс ETL и ML" as Pipeline <<Application Process>>
+  component "Модуль извлечения" as Extract <<Application Function>>
+  component "Модуль трансформации" as Transform <<Application Function>>
+  component "Модуль DWH" as DwhLoad <<Application Function>>
+  component "Модуль прогноза" as MlFunction <<Application Function>>
+  component "Модуль кластеризации" as ClusterFunction <<Application Function>>
+  component "Сервис дашбордов Superset" as SupersetService <<Application Service>>
+}
+
+package "Данные" {
+  database "Официальный датасет" as Source <<Data Object>>
+  database "Raw-данные" as Raw <<Data Object>>
+  database "Data Vault" as Vault <<Data Object>>
+  database "Витрины" as Marts <<Data Object>>
+  database "Прогноз и сегменты" as MlData <<Data Object>>
+}
+
+package "Технологический слой" {
+  node "Docker Compose ETL" as EtlNode <<Node>>
+  node "Контейнеры Airflow" as AirflowNode <<Node>>
+  node "PostgreSQL" as PgNode <<System Software>>
+  node "Docker Compose Superset" as SupersetCompose <<Node>>
+  node "Apache Superset" as SupersetNode <<System Software>>
+}
+
+Driver --> Goal : влияет на
+Goal --> Outcome : реализуется через
+Analyst --> BusinessProcess : выполняет
+BusinessProcess --> Recommendation : использует
+AirflowService --> Analyst : обслуживает
+SupersetService --> Analyst : обслуживает
+Pipeline --> AirflowService : реализует
+Pipeline --> Extract : состоит из
+Pipeline --> Transform : состоит из
+Pipeline --> DwhLoad : состоит из
+Pipeline --> MlFunction : состоит из
+Pipeline --> ClusterFunction : состоит из
+Extract --> Source : читает
+Extract --> Raw : записывает
+Transform --> Raw : читает
+DwhLoad --> Vault : записывает
+Vault --> Marts : питает
+MlFunction --> MlData : записывает прогноз
+ClusterFunction --> MlData : записывает сегменты
+SupersetService --> Marts : читает
+SupersetService --> MlData : читает
+MlData --> Recommendation : реализует
+EtlNode *-- AirflowNode
+EtlNode *-- PgNode
+SupersetCompose *-- SupersetNode
+AirflowNode --> AirflowService : размещает
+PgNode --> Raw : хранит
+PgNode --> Vault : хранит
+PgNode --> Marts : хранит
+PgNode --> MlData : хранит
+SupersetNode --> SupersetService : размещает
+
+@enduml

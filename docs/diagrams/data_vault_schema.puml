@@ -1,0 +1,77 @@
+@startuml
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam classAttributeIconSize 0
+top to bottom direction
+
+class "raw.sales_raw\nисходные продажи" as Raw {
+  calendar_year
+  cal_month_num
+  supplier
+  item_code
+  item_type
+  rtl_sales
+  rtl_transfers
+  whs_sales
+}
+
+class "dv.hub_period\nхаб периода" as HubPeriod {
+  period_hk
+  calendar_year
+  cal_month_num
+  period_date
+}
+
+class "dv.hub_supplier\nхаб поставщика" as HubSupplier {
+  supplier_hk
+  supplier
+}
+
+class "dv.hub_product\nхаб товара" as HubProduct {
+  product_hk
+  item_code
+}
+
+class "dv.link_sales\nсвязь продаж" as SalesLink {
+  sales_link_hk
+  period_hk
+  supplier_hk
+  product_hk
+}
+
+class "dv.sat_product\nсателлит товара" as ProductSat {
+  product_hk
+  item_description
+  item_type
+}
+
+class "dv.sat_sales_metrics\nсателлит метрик" as MetricsSat {
+  sales_link_hk
+  rtl_sales
+  rtl_transfers
+  whs_sales
+  metrics_hashdiff
+}
+
+class "mart.dm_monthly_sales\nвитрина месяцев" as MonthlyMart
+class "mart.dm_item_type_sales\nвитрина типов товаров" as ItemTypeMart
+class "mart.dm_supplier_sales\nвитрина поставщиков" as SupplierMart
+class "ml.sales_forecast\nпрогноз" as Forecast
+class "ml.supplier_cluster_profiles\nпортреты сегментов" as ClusterProfiles
+
+Raw --> HubPeriod : ключ периода
+Raw --> HubSupplier : ключ поставщика
+Raw --> HubProduct : ключ товара
+HubPeriod "1" --> "много" SalesLink : участвует
+HubSupplier "1" --> "много" SalesLink : участвует
+HubProduct "1" --> "много" SalesLink : участвует
+HubProduct "1" --> "много" ProductSat : описывается
+SalesLink "1" --> "много" MetricsSat : измеряется
+MetricsSat --> MonthlyMart : агрегируется
+MetricsSat --> ItemTypeMart : агрегируется
+MetricsSat --> SupplierMart : агрегируется
+ProductSat --> ItemTypeMart : добавляет тип товара
+MonthlyMart --> Forecast : используется в прогнозе
+SupplierMart --> ClusterProfiles : используется в сегментации
+
+@enduml

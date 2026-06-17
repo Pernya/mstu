@@ -1,0 +1,14 @@
+.git
+.pytest_cache
+__pycache__
+*.pyc
+*.pptx
+*.docx
+data/raw
+data/stage
+data/mart
+models
+reports
+logs
+outputs
+.DS_Store
