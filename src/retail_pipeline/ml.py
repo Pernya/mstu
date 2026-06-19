@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from sklearn.base import clone
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.feature_selection import f_regression, mutual_info_regression
@@ -254,6 +255,79 @@ def save_actual_vs_predicted_plot(paths: PathConfig, y_true: pd.Series, y_pred: 
     return figure_path
 
 
+def save_model_generalization_plot(paths: PathConfig, metrics: dict[str, Any]) -> Path:
+    """Сохраняет сравнение train и test метрик для контроля переобучения."""
+    figure_path = paths.figures_dir / "model_generalization.png"
+    plotted = pd.DataFrame(
+        [
+            {"metric": "MAE", "sample": "train", "value": metrics["train_mae"]},
+            {"metric": "MAE", "sample": "test", "value": metrics["test_mae"]},
+            {"metric": "RMSE", "sample": "train", "value": metrics["train_rmse"]},
+            {"metric": "RMSE", "sample": "test", "value": metrics["test_rmse"]},
+            {"metric": "R2", "sample": "train", "value": metrics["train_r2"]},
+            {"metric": "R2", "sample": "test", "value": metrics["test_r2"]},
+        ]
+    )
+    _, axes = plt.subplots(1, 3, figsize=(12, 4))
+    for axis, metric in zip(axes, ["MAE", "RMSE", "R2"]):
+        sns.barplot(data=plotted[plotted["metric"] == metric], x="sample", y="value", hue="sample", ax=axis, palette=["#4E79A7", "#F28E2B"], legend=False)
+        axis.set_title(metric)
+        axis.set_xlabel("")
+        axis.set_ylabel("Значение")
+    plt.suptitle("Сравнение качества на train и test")
+    plt.tight_layout()
+    plt.savefig(figure_path)
+    plt.close()
+    return figure_path
+
+
+def save_residual_diagnostics_plot(paths: PathConfig, y_true: pd.Series, y_pred: np.ndarray) -> Path:
+    """Сохраняет диагностику ошибок регрессионной модели."""
+    figure_path = paths.figures_dir / "residual_diagnostics.png"
+    residuals = pd.Series(y_true.values - y_pred, name="residual")
+    plotted = pd.DataFrame({"forecast": y_pred, "residual": residuals})
+    _, axes = plt.subplots(1, 2, figsize=(12, 5))
+    sns.histplot(residuals, kde=True, ax=axes[0], color="#4E79A7")
+    axes[0].axvline(0, color="red", linestyle="--")
+    axes[0].set_title("Распределение ошибок")
+    axes[0].set_xlabel("Факт минус прогноз")
+    axes[0].set_ylabel("Количество")
+    sns.scatterplot(data=plotted, x="forecast", y="residual", ax=axes[1], color="#59A14F")
+    axes[1].axhline(0, color="red", linestyle="--")
+    axes[1].set_title("Ошибки относительно прогноза")
+    axes[1].set_xlabel("Прогноз")
+    axes[1].set_ylabel("Ошибка")
+    plt.tight_layout()
+    plt.savefig(figure_path)
+    plt.close()
+    return figure_path
+
+
+def save_regression_learning_curve(paths: PathConfig, model: Pipeline, x_train: pd.DataFrame, y_train: pd.Series, x_test: pd.DataFrame, y_test: pd.Series) -> Path:
+    """Сохраняет learning curve по MAE для проверки устойчивости модели."""
+    figure_path = paths.figures_dir / "regression_learning_curve.png"
+    fractions = np.linspace(0.35, 1.0, 6)
+    sizes = sorted({max(8, min(len(x_train), int(len(x_train) * fraction))) for fraction in fractions})
+    rows = []
+    for size in sizes:
+        candidate = clone(model)
+        candidate.fit(x_train.iloc[:size], y_train.iloc[:size])
+        train_pred = candidate.predict(x_train.iloc[:size])
+        test_pred = candidate.predict(x_test)
+        rows.append({"train_rows": size, "sample": "train", "mae": mean_absolute_error(y_train.iloc[:size], train_pred)})
+        rows.append({"train_rows": size, "sample": "test", "mae": mean_absolute_error(y_test, test_pred)})
+    plotted = pd.DataFrame(rows)
+    plt.figure(figsize=(9, 5))
+    sns.lineplot(data=plotted, x="train_rows", y="mae", hue="sample", marker="o")
+    plt.title("Learning curve регрессионной модели")
+    plt.xlabel("Количество train-строк")
+    plt.ylabel("MAE")
+    plt.tight_layout()
+    plt.savefig(figure_path)
+    plt.close()
+    return figure_path
+
+
 def save_forecast_plot(paths: PathConfig, forecast: pd.DataFrame) -> Path:
     """Сохраняет график прогноза следующего месяца по типам товаров."""
     figure_path = paths.figures_dir / "forecast_next_month.png"
@@ -286,19 +360,35 @@ def build_model_report(metrics: dict[str, Any], removed: pd.DataFrame, ranking: 
     top_features = ranking.head(10)
     feature_lines = "\n".join([f"- {row.feature}: {row.total_score:.4f}" for row in top_features.itertuples()])
     removed_lines = "\n".join([f"- {row.feature}: {row.reason}" for row in removed.itertuples()]) if removed_count else "- Исключенных признаков нет"
+    overfit_status = "критических признаков переобучения не выявлено" if metrics["r2_gap"] <= 0.15 else "нужна дополнительная проверка из-за заметного разрыва R2"
     return f"""# Отчет по ML-модели
 
 ## Постановка задачи
 
 Модель прогнозирует месячные розничные продажи `retail_sales` по агрегированным данным о типе товара, группе поставщика, сезонности, лагах продаж и складских показателях.
 
-## Метрики
+## Метрики на тестовой выборке
 
 - MAE: {metrics["mae"]:.4f}
 - RMSE: {metrics["rmse"]:.4f}
 - R2: {metrics["r2"]:.4f}
 - Количество train-строк: {metrics["train_rows"]}
 - Количество test-строк: {metrics["test_rows"]}
+
+## Контроль переобучения
+
+Precision curve не используется, потому что задача является регрессионной, а не классификационной. Для проверки переобучения применены временное train/test-разбиение, сравнение train и test метрик, learning curve и анализ остатков.
+
+- Train MAE: {metrics["train_mae"]:.4f}
+- Test MAE: {metrics["test_mae"]:.4f}
+- Train RMSE: {metrics["train_rmse"]:.4f}
+- Test RMSE: {metrics["test_rmse"]:.4f}
+- Train R2: {metrics["train_r2"]:.4f}
+- Test R2: {metrics["test_r2"]:.4f}
+- Разрыв R2: {metrics["r2_gap"]:.4f}
+- Вывод: {overfit_status}.
+
+Для визуальной проверки сохраняются графики `model_generalization.png`, `regression_learning_curve.png`, `residual_diagnostics.png` и `actual_vs_predicted.png`.
 
 ## Исключенные признаки
 
@@ -322,9 +412,23 @@ def train_model(paths: PathConfig, ml_config: MLConfig, db_config: DatabaseConfi
     x_train, x_test, y_train, y_test = split_temporal(features, target, feature_table, ml_config.test_months)
     model = build_model(x_train, ml_config)
     model.fit(x_train, y_train)
+    train_predictions = model.predict(x_train)
     predictions = model.predict(x_test)
-    metrics = calculate_metrics(y_test, predictions)
-    metrics.update({"train_rows": int(len(x_train)), "test_rows": int(len(x_test)), "model_type": "RandomForestRegressor"})
+    train_metrics = calculate_metrics(y_train, train_predictions)
+    test_metrics = calculate_metrics(y_test, predictions)
+    metrics = {
+        **test_metrics,
+        "test_mae": test_metrics["mae"],
+        "test_rmse": test_metrics["rmse"],
+        "test_r2": test_metrics["r2"],
+        "train_mae": train_metrics["mae"],
+        "train_rmse": train_metrics["rmse"],
+        "train_r2": train_metrics["r2"],
+        "r2_gap": train_metrics["r2"] - test_metrics["r2"],
+        "train_rows": int(len(x_train)),
+        "test_rows": int(len(x_test)),
+        "model_type": "RandomForestRegressor",
+    }
     ranking = build_feature_ranking(model, x_train, y_train, x_test, y_test, ml_config)
     forecast = build_forecast(model, feature_table, list(features.columns))
     model_path = paths.models_dir / "retail_sales_forecast.joblib"
@@ -336,6 +440,9 @@ def train_model(paths: PathConfig, ml_config: MLConfig, db_config: DatabaseConfi
     save_feature_importance_plot(paths, ranking)
     save_feature_score_heatmap(paths, ranking)
     save_actual_vs_predicted_plot(paths, y_test, predictions)
+    save_model_generalization_plot(paths, metrics)
+    save_residual_diagnostics_plot(paths, y_test, predictions)
+    save_regression_learning_curve(paths, model, x_train, y_train, x_test, y_test)
     save_forecast_plot(paths, forecast)
     write_ml_outputs(db_config, metrics, forecast)
     return {"model_path": str(model_path), "forecast_rows": len(forecast), **metrics}
