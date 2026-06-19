@@ -3,8 +3,6 @@ from __future__ import annotations
 import os
 
 from superset.app import create_app
-from superset.extensions import db
-from superset.models.core import Database
 
 
 def register_database() -> None:
@@ -14,6 +12,9 @@ def register_database() -> None:
         return
     app = create_app()
     with app.app_context():
+        from superset.extensions import db
+        from superset.models.core import Database
+
         database = db.session.query(Database).filter_by(database_name="Retail DWH").one_or_none()
         if database is None:
             database = Database(database_name="Retail DWH", expose_in_sqllab=True)
