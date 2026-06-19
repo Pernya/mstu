@@ -8,10 +8,8 @@ def test_required_project_files_exist() -> None:
         root / "docker-compose.etl.yml",
         root / "docker-compose.superset.yml",
         root / "dags" / "retail_sales_ml_dwh.py",
-        root / "docs" / "diagrams" / "solution_architecture.puml",
-        root / "docs" / "diagrams" / "etl_activity.puml",
-        root / "docs" / "diagrams" / "data_architecture.mmd",
-        root / "docs" / "diagrams" / "ml_pipeline.mmd",
+        root / "docker" / "superset" / "register_retail_database.py",
+        root / "docker" / "superset" / "superset_config.py",
         root / "src" / "retail_pipeline" / "clustering.py",
     ]
     for path in required:

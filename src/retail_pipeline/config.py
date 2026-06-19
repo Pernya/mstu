@@ -35,7 +35,7 @@ class BaseConfig:
 
 @dataclass(frozen=True)
 class PathConfig(BaseConfig):
-    """Конфигурация папок для исходных данных, витрин, моделей, отчетов и диаграмм."""
+    """Конфигурация папок для исходных данных, витрин, моделей и отчетов."""
 
     raw_dir: Path
     stage_dir: Path
@@ -43,7 +43,6 @@ class PathConfig(BaseConfig):
     models_dir: Path
     reports_dir: Path
     figures_dir: Path
-    diagrams_dir: Path
 
     @classmethod
     def from_env(cls) -> "PathConfig":
@@ -57,7 +56,6 @@ class PathConfig(BaseConfig):
             models_dir=project_root / "models",
             reports_dir=project_root / "reports",
             figures_dir=project_root / "reports" / "figures",
-            diagrams_dir=project_root / "docs" / "diagrams",
         )
 
 

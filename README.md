@@ -2,7 +2,7 @@
 
 Проект реализует рабочий ETL, DWH и ML-пайплайн для анализа розничных продаж. Я использовал официальный датасет Montgomery County Warehouse and Retail Sales, загрузку через Socrata API, Apache Airflow для оркестрации, PostgreSQL для хранилища, Data Vault 2.0 как слой интеграции, Apache Superset для дашбордов и `RandomForestRegressor` для прогноза месячных retail sales.
 
-В репозитории лежит только код, конфигурация и документация для запуска. Данные, модели, отчеты, графики и файлы защиты генерируются локально после запуска DAG и не хранятся в Git.
+В репозитории лежит только код и минимальная инструкция для запуска. Данные, модели, отчеты, графики, диаграммы и файлы защиты генерируются или оформляются локально и не хранятся в Git.
 
 ## Быстрый запуск
 
@@ -52,13 +52,10 @@ dags/                     DAG Apache Airflow
 src/retail_pipeline/      Python-пакет ETL, DWH, EDA, ML и кластеризации
 docker/postgres/init/     инициализация PostgreSQL
 docker/superset/          образ и инициализация Superset
-docs/                     русская документация и исходники диаграмм
 tests/                    pytest-проверки основных модулей
-data/                     локальные данные после запуска
-models/                   локальная модель после обучения
-reports/                  локальные отчеты и графики после запуска
-logs/                     локальные логи Airflow
 ```
+
+При запуске пайплайн сам создаст локальные папки `data/`, `models/`, `reports/` и `logs/`. Эти каталоги не отслеживаются Git, потому что содержат результаты конкретного запуска.
 
 ## DAG
 
@@ -178,29 +175,6 @@ docker compose -f docker-compose.etl.yml --env-file .env exec postgres psql -U r
 docker compose -f docker-compose.etl.yml --env-file .env exec postgres psql -U retail_user -d retail_dwh -c "select count(*) from ml.supplier_cluster_profiles;"
 ```
 
-## Диаграммы
+## Документация и диаграммы
 
-Исходники диаграмм находятся в `docs/diagrams`.
-
-Опциональный рендер PlantUML:
-
-```bash
-plantuml docs/diagrams/solution_architecture.puml
-plantuml docs/diagrams/etl_activity.puml
-plantuml docs/diagrams/archimate_solution.puml
-```
-
-Опциональный рендер Mermaid:
-
-```bash
-mmdc -i docs/diagrams/data_architecture.mmd -o docs/diagrams/data_architecture.png
-mmdc -i docs/diagrams/ml_pipeline.mmd -o docs/diagrams/ml_pipeline.png
-```
-
-## Дополнительная документация
-
-- `docs/data_dictionary.md` описывает источник, схемы, витрины, признаки и бизнес-ключи;
-- `docs/implementation_notes.md` фиксирует технические тонкости реализации;
-- `docs/dashboard_plan.md` описывает построение дашбордов в Superset;
-- `docs/airflow_graphs.md` объясняет, что показывать в Airflow.
-- `docs/visualizations.md` перечисляет графики пайплайна и смысл каждого файла.
+Подробная пояснительная записка, презентация, текст защиты и ArchiMate-диаграммы хранятся отдельно от кодового репозитория. В Git оставлен только воспроизводимый проект: Docker Compose, DAG, Python-пакет, настройки Superset и тесты.

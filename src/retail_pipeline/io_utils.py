@@ -18,7 +18,6 @@ def ensure_directories(paths: PathConfig) -> None:
         paths.models_dir,
         paths.reports_dir,
         paths.figures_dir,
-        paths.diagrams_dir,
     ]:
         directory.mkdir(parents=True, exist_ok=True)
 
